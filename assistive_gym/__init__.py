@@ -6,8 +6,8 @@ robots = ['PR2', 'Jaco', 'Baxter', 'Sawyer', 'Stretch', 'Panda']
 for task in tasks:
     for robot in robots:
         register(
-            id='%s%s-v1' % (task, robot),
-            entry_point='assistive_gym.envs:%s%sEnv' % (task, robot),
+            id='%s%sHuman-v1' % (task, robot),
+            entry_point='assistive_gym.envs:%s%sHumanEnv' % (task, robot),
             max_episode_steps=200,
         )
 

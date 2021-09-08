@@ -8,8 +8,6 @@ class ScratchItchEnv(AssistiveEnv):
         super(ScratchItchEnv, self).__init__(robot=robot, human=human, task='scratch_itch', obs_robot_len=(23 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(24 + len(human.controllable_joint_indices)))
 
     def step(self, action):
-        if self.human.controllable:
-            action = np.concatenate([action['robot'], action['human']])
         self.take_step(action)
 
         obs = self._get_obs()
@@ -36,12 +34,14 @@ class ScratchItchEnv(AssistiveEnv):
 
         info = {'total_force_on_human': self.total_force_on_human, 'task_success': int(self.task_success >= self.config('task_success_threshold')), 'action_robot_len': self.action_robot_len, 'action_human_len': self.action_human_len, 'obs_robot_len': self.obs_robot_len, 'obs_human_len': self.obs_human_len}
         done = self.iteration >= 200
+        if self.iteration >= 200:
+            print("Iteration Comlpete: ", reward, self.task_success)
 
         if not self.human.controllable:
             return obs, reward, done, info
         else:
             # Co-optimization with both human and robot controllable
-            return obs, {'robot': reward, 'human': reward}, {'robot': done, 'human': done, '__all__': done}, {'robot': info, 'human': info}
+            return obs, reward, done, {'robot': info, 'human': info}
 
     def get_total_force(self):
         total_force_on_human = np.sum(self.robot.get_contact_points(self.human)[-1])
@@ -87,7 +87,8 @@ class ScratchItchEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
+            joinedlist = [*robot_obs, *human_obs]
+            return joinedlist
         return robot_obs
 
     def reset(self):

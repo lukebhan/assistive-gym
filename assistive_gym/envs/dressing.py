@@ -13,8 +13,6 @@ class DressingEnv(AssistiveEnv):
         # if self.tt is not None:
         #     print('Time per iteration:', time.time() - self.tt)
         # self.tt = time.time()
-        if self.human.controllable:
-            action = np.concatenate([action['robot'], action['human']])
         self.take_step(action)
 
         shoulder_pos = self.human.get_pos_orient(self.human.left_shoulder)[0]
@@ -67,13 +65,13 @@ class DressingEnv(AssistiveEnv):
             print('Task success:', self.task_success, 'Average forces on arm:', self.cloth_force_sum)
 
         info = {'total_force_on_human': self.total_force_on_human, 'task_success': int(self.task_success >= self.config('task_success_threshold')), 'action_robot_len': self.action_robot_len, 'action_human_len': self.action_human_len, 'obs_robot_len': self.obs_robot_len, 'obs_human_len': self.obs_human_len}
-        done = self.iteration >= 200
+        done = self.iteration > 200 
 
         if not self.human.controllable:
             return obs, reward, done, info
         else:
             # Co-optimization with both human and robot controllable
-            return obs, {'robot': reward, 'human': reward}, {'robot': done, 'human': done, '__all__': done}, {'robot': info, 'human': info}
+            return obs, reward, done, {'robot': info, 'human': info}
 
     def _get_obs(self, agent=None):
         end_effector_pos, end_effector_orient = self.robot.get_pos_orient(self.robot.left_end_effector)
@@ -106,7 +104,8 @@ class DressingEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
+            obs = [*robot_obs, *human_obs]
+            return obs
         return robot_obs
 
     def reset(self):
