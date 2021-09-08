@@ -87,7 +87,9 @@ class ScratchItchEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            joinedlist = [*robot_obs, *human_obs]
+            # baseline vector for adding in impairments
+            vec = [0, 0, 0, 0]
+            joinedlist = [*robot_obs, *human_obs, *vec]
             return joinedlist
         return robot_obs
 
