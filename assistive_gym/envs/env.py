@@ -39,11 +39,12 @@ class AssistiveEnv(gym.Env):
         self.human_limits_model = load_model(os.path.join(self.directory, 'realistic_arm_limits_model.h5'))
         self.action_robot_len = len(robot.controllable_joint_indices) if robot is not None else 0
         self.action_human_len = len(human.controllable_joint_indices) if human is not None and human.controllable else 0
-        self.action_space = spaces.Box(low=np.array([-1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), high=np.array([1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-1.0]*(3), dtype=np.float32), high=np.array([1.0]*(3), dtype=np.float32), dtype=np.float32)
+        self.action_space_env = spaces.Box(low=np.array([-1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), high=np.array([1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), dtype=np.float32)
         self.obs_robot_len = obs_robot_len
         self.obs_human_len = obs_human_len if human is not None and human.controllable else 0
-        # add 4 for our impairment vector
-        self.observation_space = spaces.Box(low=np.array([-1000000000.0]*(self.obs_robot_len+self.obs_human_len+4), dtype=np.float32), high=np.array([1000000000.0]*(self.obs_robot_len+self.obs_human_len+4), dtype=np.float32), dtype=np.float32)
+        # add 8 for our impairment vector
+        self.observation_space = spaces.Box(low=np.array([-4.0]*12, dtype=np.float32), high=np.array([4.0]*12, dtype=np.float32))
         self.action_space_robot = spaces.Box(low=np.array([-1.0]*self.action_robot_len, dtype=np.float32), high=np.array([1.0]*self.action_robot_len, dtype=np.float32), dtype=np.float32)
         self.action_space_human = spaces.Box(low=np.array([-1.0]*self.action_human_len, dtype=np.float32), high=np.array([1.0]*self.action_human_len, dtype=np.float32), dtype=np.float32)
         self.observation_space_robot = spaces.Box(low=np.array([-1000000000.0]*self.obs_robot_len, dtype=np.float32), high=np.array([1000000000.0]*self.obs_robot_len, dtype=np.float32), dtype=np.float32)
@@ -185,7 +186,7 @@ class AssistiveEnv(gym.Env):
             self.last_sim_time = time.time()
         self.iteration += 1
         self.forces = []
-        actions = np.clip(actions, a_min=self.action_space.low, a_max=self.action_space.high)
+        actions = np.clip(actions, a_min=self.action_space_env.low, a_max=self.action_space_env.high)
         actions *= action_multiplier
         action_index = 0
         for i, agent in enumerate(self.agents):

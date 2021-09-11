@@ -1,5 +1,6 @@
 import numpy as np
 import pybullet as p
+from stable_baselines3 import PPO
 
 from .env import AssistiveEnv
 
@@ -8,9 +9,18 @@ class ScratchItchEnv(AssistiveEnv):
         super(ScratchItchEnv, self).__init__(robot=robot, human=human, task='scratch_itch', obs_robot_len=(23 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(24 + len(human.controllable_joint_indices)))
 
     def step(self, action):
-        self.take_step(action)
+        # Load our policies
+        limits = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_limits_normal/model_2000000_steps')
+        limAction = limits.predict(self.obs)
+        tremor = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_normal_tremor/model_2000000_steps')
+        tremAction = tremor.predict(self.obs)   
+        weakness = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_weakness_normal/model_2000000_steps')
+        weakAction = weakness.predict(self.obs)   
+        actionVal = (action[0]*limAction[0] + action[1]*tremAction[0] + action[2]*weakAction[0])/3.0
 
-        obs = self._get_obs()
+        self.take_step(actionVal)
+
+        self.obs = self._get_obs()
         # print(np.array_str(obs, precision=3, suppress_small=True))
 
         # Get human preferences
@@ -36,12 +46,13 @@ class ScratchItchEnv(AssistiveEnv):
         done = self.iteration >= 200
         if self.iteration >= 200:
             print("Iteration Comlpete: ", reward, self.task_success)
-
+        
+        obs_ret = self.human.get_impairments()
         if not self.human.controllable:
-            return obs, reward, done, info
+            return obs_ret, reward, done, info
         else:
             # Co-optimization with both human and robot controllable
-            return obs, reward, done, {'robot': info, 'human': info}
+            return obs_ret, reward, done, {'robot': info, 'human': info}
 
     def get_total_force(self):
         total_force_on_human = np.sum(self.robot.get_contact_points(self.human)[-1])
@@ -132,7 +143,9 @@ class ScratchItchEnv(AssistiveEnv):
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1, physicsClientId=self.id)
 
         self.init_env_variables()
-        return self._get_obs()
+        self.obs = self._get_obs()
+        obsRet = self.human.get_impairments()
+        return obsRet
 
     def generate_target(self):
         # Randomly select either upper arm or forearm for the target limb to scratch

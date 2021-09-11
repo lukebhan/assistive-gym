@@ -57,7 +57,7 @@ class Human(Agent):
         self.j_left_knee = 38
         self.j_left_ankle_x, self.j_left_ankle_y, self.j_left_ankle_z = 39, 40, 41
 
-        self.impairment = 'random'
+        self.impairment = ['tumor', 'weakness', 'limits']
         self.limit_scale = 1.0
         self.strength = 1.0
         self.tremors = np.zeros(10)
@@ -77,20 +77,18 @@ class Human(Agent):
             gender = np_random.choice(['male', 'female'])
         self.gender = gender
         # Specify human impairments
-        if impairment == 'random':
-            impairment = np_random.choice(['none', 'limits', 'weakness', 'tremor'])
-        elif impairment == 'no_tremor':
-            impairment = np_random.choice(['none', 'limits', 'weakness'])
+        impairment = ['limits', 'weakness', 'tremor']
         self.impairment = impairment
-        self.limit_scale = 1.0 if impairment != 'limits' else np_random.uniform(0.5, 1.0)
-        self.strength = 1.0 if impairment != 'weakness' else np_random.uniform(0.25, 1.0)
-        if self.impairment != 'tremor':
+        self.limit_scale = 1.0 if 'limits' not in impairment else np_random.uniform(0.75, 0.1)
+        self.strength = 1.0 if 'weakness' not in impairment else np_random.normal(0.66, 0.2)
+        if  'tremor' not in self.impairment :
             self.tremors = np.zeros(len(self.controllable_joint_indices))
         elif self.head in self.controllable_joint_indices:
-            self.tremors = np_random.uniform(np.deg2rad(-20), np.deg2rad(20), size=len(self.controllable_joint_indices))
+            self.tremors = np_random.normal(np.deg2rad(0), np.deg2rad(10), size=len(self.controllable_joint_indices))
         else:
-            self.tremors = np_random.uniform(np.deg2rad(-10), np.deg2rad(10), size=len(self.controllable_joint_indices))
+            self.tremors = np_random.normal(np.deg2rad(0), np.deg2rad(5), size=len(self.controllable_joint_indices))
         # Initialize human
+        print("Impairments: Weakness-", self.strength, " Limits-", self.limit_scale, " Tremor-", self.tremors)
         self.body = human_creation.create_human(static=static_human_base, limit_scale=self.limit_scale, specular_color=[0.1, 0.1, 0.1], gender=self.gender, config=config, mass=mass, radius_scale=radius_scale, height_scale=height_scale)
         self.hand_radius = human_creation.hand_radius
         self.elbow_radius = human_creation.elbow_radius
@@ -105,7 +103,7 @@ class Human(Agent):
         # Set static joints
         joint_angles = self.get_joint_angles_dict(self.all_joint_indices)
         for j in self.all_joint_indices:
-            if use_static_joints and (j not in self.controllable_joint_indices or (self.impairment != 'tremor' and reactive_force is None and not self.controllable)):
+            if use_static_joints and (j not in self.controllable_joint_indices or ('tremor' not in self.impairment and reactive_force is None and not self.controllable)):
                 # Make all non controllable joints on the person static by setting mass of each link (joint) to 0
                 p.changeDynamics(self.body, j, mass=0, physicsClientId=self.id)
                 # Set velocities to 0
@@ -151,3 +149,6 @@ class Human(Agent):
             # The person is in an invalid pose. Move joint angles back to the most recent valid pose.
             self.set_joint_angles(indices, self.arm_previous_valid_pose[right])
 
+    def get_impairments(self):
+        joinedArr = [self.strength, self.limit_scale, *self.tremors]
+        return joinedArr
