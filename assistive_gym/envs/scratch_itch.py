@@ -1,12 +1,25 @@
 import numpy as np
 import pybullet as p
 from stable_baselines3 import PPO
+from .logit import LogisticRegression
+import torch
 
 from .env import AssistiveEnv
 
 class ScratchItchEnv(AssistiveEnv):
     def __init__(self, robot, human):
         super(ScratchItchEnv, self).__init__(robot=robot, human=human, task='scratch_itch', obs_robot_len=(23 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(24 + len(human.controllable_joint_indices)))
+        # use for parameter estimator
+        self.obs_state = np.array([-1]*12, dtype=np.float32)
+        # use for autotuned sim2real estimator
+        self.obs_traj = []
+
+        self.logit = LogisticRegression(85, 12)
+        self.optimizer = torch.optim.SGD(self.logit.parameters(), lr=0.001)
+        self.optimizer.zero_grad()
+        self.criterion = torch.nn.MSELoss()
+        self.count = 0
+        self.startingGuess = np.array([0]*12, dtype=np.float32)
 
     def step(self, action):
         # Load our policies
@@ -21,6 +34,8 @@ class ScratchItchEnv(AssistiveEnv):
         self.take_step(actionVal)
 
         self.obs = self._get_obs()
+        joinedArr = np.concatenate((self.obs, actionVal))
+        self.obs_traj.append(joinedArr)
         # print(np.array_str(obs, precision=3, suppress_small=True))
 
         # Get human preferences
@@ -42,7 +57,7 @@ class ScratchItchEnv(AssistiveEnv):
         if self.gui and self.tool_force_at_target > 0:
             print('Task success:', self.task_success, 'Tool force at target:', self.tool_force_at_target, reward_force_scratch)
 
-        info = {'total_force_on_human': self.total_force_on_human, 'task_success': int(self.task_success >= self.config('task_success_threshold')), 'action_robot_len': self.action_robot_len, 'action_human_len': self.action_human_len, 'obs_robot_len': self.obs_robot_len, 'obs_human_len': self.obs_human_len}
+        info = {'total_force_on_human': self.total_force_on_human, 'task_success': int(self.task_success >= self.config('task_success_threshold')), 'action_robot_len': self.action_robot_len, 'action_human_len': self.action_human_len, 'obs_robot_len': self.obs_robot_len, 'obs_human_len': self.obs_human_len, 'task_sucess_value': self.task_success}
         done = self.iteration >= 200
         if self.iteration >= 200:
             print("Iteration Comlpete: ", reward, self.task_success)
@@ -145,7 +160,40 @@ class ScratchItchEnv(AssistiveEnv):
         self.init_env_variables()
         self.obs = self._get_obs()
         obsRet = self.human.get_impairments()
-        return obsRet
+
+        # autotuned
+        if(self.count != 0):
+            labels = []
+            t = torch.FloatTensor(self.obs_traj)
+            outputs = self.logit(t)
+            for i in range(len(outputs)):
+                arr = []
+                for idx, item in enumerate(obsRet):
+                    if(obsRet[idx] > self.startingGuess[idx]):
+                        arr.append(1)
+                    else:
+                        arr.append(0)
+                labels.append(arr)
+            l = torch.FloatTensor(labels)
+            self.optimizer.zero_grad()
+            loss = self.criterion(outputs, l)
+            loss.backward()
+            self.optimizer.step()
+            retval = outputs.tolist()
+            E_mean = []
+            # take a random obs action pair
+            output= outputs.detach().numpy()[np.random.randint(len(self.obs_traj))]
+            for idx, item in enumerate(self.startingGuess):
+                if output[idx] < 0.5:
+                    self.startingGuess[idx] -= 0.01*output[idx]
+                else:
+                    self.startingGuess[idx] += 0.01*output[idx]
+            self.obs_traj = []
+        else:
+            self.count += 1
+            self.obs_traj = []
+        print(self.startingGuess)
+        return self.startingGuess
 
     def generate_target(self):
         # Randomly select either upper arm or forearm for the target limb to scratch
