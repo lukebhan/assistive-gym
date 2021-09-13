@@ -14,4 +14,4 @@ env = Monitor(env, log_dir)
 
 model = PPO("MlpPolicy", env, verbose=1)
 callback = CheckpointCallback(save_freq=1000, save_path = log_dir, name_prefix = 'model')
-model.learn(total_timesteps=10000000, callback=[callback, autotune])
+model.learn(total_timesteps=10000000, callback=callback)
