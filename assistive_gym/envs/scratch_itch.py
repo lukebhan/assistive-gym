@@ -162,38 +162,37 @@ class ScratchItchEnv(AssistiveEnv):
         obsRet = self.human.get_impairments()
 
         # autotuned
-        if(self.count != 0):
-            labels = []
-            t = torch.FloatTensor(self.obs_traj)
-            outputs = self.logit(t)
-            for i in range(len(outputs)):
-                arr = []
-                for idx, item in enumerate(obsRet):
-                    if(obsRet[idx] > self.startingGuess[idx]):
-                        arr.append(1)
-                    else:
-                        arr.append(0)
-                labels.append(arr)
-            l = torch.FloatTensor(labels)
-            self.optimizer.zero_grad()
-            loss = self.criterion(outputs, l)
-            loss.backward()
-            self.optimizer.step()
-            retval = outputs.tolist()
-            E_mean = []
-            # take a random obs action pair
-            output= outputs.detach().numpy()[np.random.randint(len(self.obs_traj))]
-            for idx, item in enumerate(self.startingGuess):
-                if output[idx] < 0.5:
-                    self.startingGuess[idx] -= 0.01*output[idx]
-                else:
-                    self.startingGuess[idx] += 0.01*output[idx]
-            self.obs_traj = []
-        else:
-            self.count += 1
-            self.obs_traj = []
-        print(self.startingGuess)
-        return self.startingGuess
+#if(self.count != 0):
+#            labels = []
+#            t = torch.FloatTensor(self.obs_traj)
+#            outputs = self.logit(t)
+#            for i in range(len(outputs)):
+#                arr = []
+#                for idx, item in enumerate(obsRet):
+#                    if(obsRet[idx] > self.startingGuess[idx]):
+#                        arr.append(1)
+#                    else:
+#                        arr.append(0)
+#                labels.append(arr)
+#            l = torch.FloatTensor(labels)
+#            self.optimizer.zero_grad()
+#            loss = self.criterion(outputs, l)
+#            loss.backward()
+#            self.optimizer.step()
+#            retval = outputs.tolist()
+#            E_mean = []
+#            # take a random obs action pair
+#            output= outputs.detach().numpy()[np.random.randint(len(self.obs_traj))]
+#            for idx, item in enumerate(self.startingGuess):
+#                if output[idx] < 0.5:
+#                    self.startingGuess[idx] -= 0.01*output[idx]
+#                else:
+#                    self.startingGuess[idx] += 0.01*output[idx]
+#            self.obs_traj = []
+#        else:
+#            self.count += 1
+#            self.obs_traj = []
+        return obsRet
 
     def generate_target(self):
         # Randomly select either upper arm or forearm for the target limb to scratch
