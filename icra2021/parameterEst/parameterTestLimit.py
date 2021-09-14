@@ -15,4 +15,4 @@ for j in range(100):
         obs, rew, done, info  = env.step(act[0])
     print(info)
     success_arr.append(info["human"]["task_sucess_value"])
-np.savetxt("weak.dat", success_arr)
+np.savetxt("limit.dat", success_arr)
