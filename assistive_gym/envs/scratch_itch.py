@@ -23,12 +23,12 @@ class ScratchItchEnv(AssistiveEnv):
 
     def step(self, action):
         # Load our policies
-        limits = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_limits_normal/model_2000000_steps')
-        limAction = limits.predict(self.obs)
-        tremor = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_normal_tremor/model_2000000_steps')
-        tremAction = tremor.predict(self.obs)   
-        weakness = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_weakness_normal/model_2000000_steps')
-        weakAction = weakness.predict(self.obs)   
+        #limits = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_limits_normal/model_2000000_steps')
+        #limAction = limits.predict(self.obs)
+        #tremor = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_normal_tremor/model_2000000_steps')
+        #tremAction = tremor.predict(self.obs)   
+        #weakness = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_weakness_normal/model_2000000_steps')
+        #weakAction = weakness.predict(self.obs)   
         #actionVal = (action[0]*limAction[0] + action[1]*tremAction[0] + action[2]*weakAction[0])/3.0
         self.take_step(action)
         self.obs = self._get_obs()
