@@ -77,7 +77,7 @@ class Human(Agent):
             gender = np_random.choice(['male', 'female'])
         self.gender = gender
         # Specify human impairments
-        impairment = ['weakness']
+        impairment = ['weakness', 'limits', 'tremor']
         self.impairment = impairment
         self.limit_scale = 1.0 if 'limits' not in impairment else np_random.uniform(0.75, 0.1)
         self.strength = 1.0 if 'weakness' not in impairment else np_random.normal(0.66, 0.2)
