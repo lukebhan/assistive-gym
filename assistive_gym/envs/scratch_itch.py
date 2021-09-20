@@ -29,13 +29,11 @@ class ScratchItchEnv(AssistiveEnv):
         tremAction = tremor.predict(self.obs)   
         weakness = PPO.load('/home/luke/icra2021/assistive-gym/icra2021/base/model_weakness_normal/model_2000000_steps')
         weakAction = weakness.predict(self.obs)   
-        actionVal = (action[0]*limAction[0] + action[1]*tremAction[0] + action[2]*weakAction[0])/3.0
-
-        self.take_step(actionVal)
-
+        #actionVal = (action[0]*limAction[0] + action[1]*tremAction[0] + action[2]*weakAction[0])/3.0
+        self.take_step(action)
         self.obs = self._get_obs()
-        joinedArr = np.concatenate((self.obs, actionVal))
-        self.obs_traj.append(joinedArr)
+        #joinedArr = np.concatenate((self.obs, actionVal))
+        #self.obs_traj.append(joinedArr)
         # print(np.array_str(obs, precision=3, suppress_small=True))
 
         # Get human preferences
@@ -67,7 +65,7 @@ class ScratchItchEnv(AssistiveEnv):
             return obs_ret, reward, done, info
         else:
             # Co-optimization with both human and robot controllable
-            return obs_ret, reward, done, {'robot': info, 'human': info}
+            return self.obs, reward, done, {'robot': info, 'human': info}
 
     def get_total_force(self):
         total_force_on_human = np.sum(self.robot.get_contact_points(self.human)[-1])
@@ -159,7 +157,7 @@ class ScratchItchEnv(AssistiveEnv):
 
         self.init_env_variables()
         self.obs = self._get_obs()
-        obsRet = self.human.get_impairments()
+        #obsRet = self.human.get_impairments()
 
         # autotuned
 #if(self.count != 0):
@@ -192,7 +190,7 @@ class ScratchItchEnv(AssistiveEnv):
 #        else:
 #            self.count += 1
 #            self.obs_traj = []
-        return obsRet
+        return self.obs
 
     def generate_target(self):
         # Randomly select either upper arm or forearm for the target limb to scratch

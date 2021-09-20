@@ -39,17 +39,19 @@ class AssistiveEnv(gym.Env):
         self.human_limits_model = load_model(os.path.join(self.directory, 'realistic_arm_limits_model.h5'))
         self.action_robot_len = len(robot.controllable_joint_indices) if robot is not None else 0
         self.action_human_len = len(human.controllable_joint_indices) if human is not None and human.controllable else 0
-        self.action_space = spaces.Box(low=np.array([-1.0]*(3), dtype=np.float32), high=np.array([1.0]*(3), dtype=np.float32), dtype=np.float32)
-        self.action_space_env = spaces.Box(low=np.array([-1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), high=np.array([1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), dtype=np.float32)
+        #self.action_space = spaces.Box(low=np.array([-1.0]*(3), dtype=np.float32), high=np.array([1.0]*(3), dtype=np.float32), dtype=np.float32)
+        self.action_space= spaces.Box(low=np.array([-1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), high=np.array([1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), dtype=np.float32)
         self.obs_robot_len = obs_robot_len
         self.obs_human_len = obs_human_len if human is not None and human.controllable else 0
         # add 8 for our impairment vector
-        self.observation_space = spaces.Box(low=np.array([-4.0]*12, dtype=np.float32), high=np.array([4.0]*12, dtype=np.float32))
+        #self.observation_space = spaces.Box(low=np.array([-4.0]*12, dtype=np.float32), high=np.array([4.0]*12, dtype=np.float32))
         self.action_space_robot = spaces.Box(low=np.array([-1.0]*self.action_robot_len, dtype=np.float32), high=np.array([1.0]*self.action_robot_len, dtype=np.float32), dtype=np.float32)
         self.action_space_human = spaces.Box(low=np.array([-1.0]*self.action_human_len, dtype=np.float32), high=np.array([1.0]*self.action_human_len, dtype=np.float32), dtype=np.float32)
         self.observation_space_robot = spaces.Box(low=np.array([-1000000000.0]*self.obs_robot_len, dtype=np.float32), high=np.array([1000000000.0]*self.obs_robot_len, dtype=np.float32), dtype=np.float32)
         self.observation_space_human = spaces.Box(low=np.array([-1000000000.0]*self.obs_human_len, dtype=np.float32), high=np.array([1000000000.0]*self.obs_human_len, dtype=np.float32), dtype=np.float32)
-
+        self.observation_space = spaces.Box(low=np.array([-1000000000.0]*(self.obs_robot_len+self.obs_human_len+4), dtype=np.float32), high=np.array([1000000000.0]*(4+self.obs_robot_len+self.obs_human_len), dtype=np.float32), dtype=np.float32)
+        print(self.obs_human_len, self.obs_robot_len)
+        print(self.action_robot_len, self.action_human_len)
         self.agents = []
         self.plane = Agent()
         self.robot = robot
@@ -186,7 +188,7 @@ class AssistiveEnv(gym.Env):
             self.last_sim_time = time.time()
         self.iteration += 1
         self.forces = []
-        actions = np.clip(actions, a_min=self.action_space_env.low, a_max=self.action_space_env.high)
+        actions = np.clip(actions, a_min=self.action_space.low, a_max=self.action_space.high)
         actions *= action_multiplier
         action_index = 0
         for i, agent in enumerate(self.agents):
@@ -356,9 +358,8 @@ class AssistiveEnv(gym.Env):
     def get_camera_image_depth(self, light_pos=[0, -3, 1], shadow=False, ambient=0.8, diffuse=0.3, specular=0.1):
         assert self.view_matrix is not None, 'You must call env.setup_camera() or env.setup_camera_rpy() before getting a camera image'
         w, h, img, depth, _ = p.getCameraImage(self.camera_width, self.camera_height, self.view_matrix, self.projection_matrix, lightDirection=light_pos, shadow=shadow, lightAmbientCoeff=ambient, lightDiffuseCoeff=diffuse, lightSpecularCoeff=specular, physicsClientId=self.id)
-        img = np.reshape(img, (h, w, 4))
         depth = np.reshape(depth, (h, w))
-        return img, depth
+        return h, w, img, depth
 
     def create_sphere(self, radius=0.01, mass=0.0, pos=[0, 0, 0], visual=True, collision=True, rgba=[0, 1, 1, 1], maximal_coordinates=False, return_collision_visual=False):
         sphere_collision = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=radius, physicsClientId=self.id) if collision else -1
